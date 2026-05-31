@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electron Workshop — Weekly Check-In & Sprints</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream:   #F0E7D7;
+      --orange:  #D9532B;
+      --orange-light: #E8714F;
+      --charcoal: #76482E;
+      --muted:   #A07B5C;
+      --white:   #FFFFFF;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #3A2014;
+      font-family: 'League Spartan', sans-serif;
+      overflow: hidden;
+      cursor: none;
+    }
+
+    /* ─── Custom cursor ─────────────────────────────────── */
+    .cursor {
+      position: fixed;
+      width: 12px; height: 12px;
+      background: var(--orange);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease, opacity 0.2s ease;
+      mix-blend-mode: multiply;
+    }
+
+    /* ─── Stage (16:9 letterboxed) ──────────────────────── */
+    .stage {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+    }
+
+    /* ─── Slides ────────────────────────────────────────── */
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .slide-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 0;
+    }
+
+    .slide-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%; height: 100%;
+    }
+
+    /* ─── Slide 1 — Intro ───────────────────────────────── */
+    .slide-intro .logo-wrap {
+      width: 380px;
+      margin-bottom: 3.2rem;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s;
+    }
+    .slide-intro.active .logo-wrap {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .slide-intro .logo-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .slide-intro .headline {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.7s ease 0.28s, transform 0.7s ease 0.28s;
+    }
+    .slide-intro.active .headline {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .slide-intro .headline .line1 {
+      display: block;
+      font-size: 7.4rem;
+      font-weight: 700;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      color: var(--charcoal);
+      text-shadow: 2px 3px 14px rgba(118, 72, 46, 0.22);
+    }
+    .slide-intro .headline .line2 {
+      display: block;
+      font-size: 7.4rem;
+      font-weight: 600;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      color: var(--orange);
+      text-shadow: 2px 3px 14px rgba(217, 83, 43, 0.28);
+    }
+
+    .slide-intro .rule {
+      width: 64px;
+      height: 4px;
+      background: var(--orange);
+      margin-top: 2.8rem;
+      border-radius: 2px;
+      opacity: 0;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: opacity 0.5s ease 0.5s, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.5s;
+    }
+    .slide-intro.active .rule {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+
+    /* ─── Slide 2 — Pitches + Demo ──────────────────────── */
+    .slide-pitches .pitch-inner {
+      text-align: center;
+      max-width: 900px;
+      padding: 0 4rem;
+    }
+
+    .slide-pitches .slide-tag {
+      display: inline-block;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 1.4rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
+    }
+    .slide-pitches.active .slide-tag {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .slide-pitches .pitch-heading {
+      font-size: 6.6rem;
+      font-weight: 700;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      color: var(--charcoal);
+      text-shadow: 2px 3px 14px rgba(118, 72, 46, 0.22);
+      margin-bottom: 2.4rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.65s ease 0.2s, transform 0.65s ease 0.2s;
+    }
+    .slide-pitches.active .pitch-heading {
+      opacity: 1; transform: translateY(0);
+    }
+    .slide-pitches .pitch-heading em {
+      font-style: normal;
+      color: var(--orange);
+    }
+
+    .slide-pitches .pitch-instruction {
+      font-size: 1.55rem;
+      font-weight: 500;
+      color: var(--charcoal);
+      letter-spacing: 0.01em;
+      margin-bottom: 2.6rem;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.65s ease 0.32s, transform 0.65s ease 0.32s;
+    }
+    .slide-pitches.active .pitch-instruction {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .slide-pitches .ladder-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.9rem;
+      background: var(--charcoal);
+      color: var(--white);
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: 0.015em;
+      padding: 1.1rem 2.2rem;
+      border-radius: 100px;
+      text-decoration: none;
+      border: 2px solid transparent;
+      transition: background 0.22s ease, color 0.22s ease, border-color 0.22s ease, transform 0.18s ease;
+      cursor: none;
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+      animation: none;
+    }
+    .slide-pitches.active .ladder-pill {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      transition: opacity 0.65s ease 0.44s, transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.44s,
+                  background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+    }
+    .slide-pitches .ladder-pill:hover {
+      background: var(--orange);
+      color: var(--white);
+      transform: translateY(-2px) scale(1.02);
+    }
+    .slide-pitches .ladder-pill .pill-icon {
+      width: 22px; height: 22px;
+      flex-shrink: 0;
+      opacity: 0.75;
+    }
+    .slide-pitches .ladder-pill .pill-badge {
+      background: var(--orange);
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      transition: background 0.22s ease, color 0.22s ease;
+    }
+    .slide-pitches .ladder-pill:hover .pill-badge {
+      background: var(--white);
+      color: var(--orange);
+    }
+
+    .slide-pitches .pitch-note {
+      margin-top: 1.8rem;
+      font-size: 1.05rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+      opacity: 0;
+      transition: opacity 0.6s ease 0.58s;
+    }
+    .slide-pitches.active .pitch-note {
+      opacity: 1;
+    }
+    .slide-pitches .pitch-note strong {
+      font-weight: 700;
+      color: var(--charcoal);
+    }
+
+    /* ─── Slide 3 — Roadmap ─────────────────────────────── */
+    .slide-roadmap .roadmap-inner {
+      text-align: center;
+      padding: 0 4rem;
+    }
+
+    .slide-roadmap .roadmap-eyebrow {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 1.6rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
+    }
+    .slide-roadmap.active .roadmap-eyebrow {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .slide-roadmap .roadmap-heading {
+      font-size: 11rem;
+      font-weight: 700;
+      line-height: 0.85;
+      letter-spacing: -0.03em;
+      color: var(--charcoal);
+      text-shadow: 2px 4px 16px rgba(118, 72, 46, 0.22);
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease 0.22s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.22s;
+    }
+    .slide-roadmap.active .roadmap-heading {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .slide-roadmap .roadmap-sub {
+      margin-top: 2rem;
+      font-size: 1.7rem;
+      font-weight: 500;
+      color: var(--charcoal);
+      letter-spacing: 0.02em;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.6s ease 0.38s, transform 0.6s ease 0.38s;
+    }
+    .slide-roadmap.active .roadmap-sub {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .slide-roadmap .roadmap-spacer {
+      margin-top: 5rem;
+      width: 400px;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--orange), transparent);
+      opacity: 0;
+      transition: opacity 0.6s ease 0.52s;
+    }
+    .slide-roadmap.active .roadmap-spacer {
+      opacity: 0.35;
+    }
+
+    /* ─── Navigation dots ───────────────────────────────── */
+    .nav-dots {
+      position: absolute;
+      bottom: 3rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 14px;
+      z-index: 10;
+      padding: 8px 16px;
+    }
+    .dot {
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      background: transparent;
+      border: 2px solid rgba(118, 72, 46, 0.4);
+      cursor: none;
+      transition: background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    }
+    .dot:hover {
+      border-color: var(--orange);
+    }
+    .dot.active {
+      background: var(--orange);
+      border-color: var(--orange);
+      transform: scale(1.15);
+    }
+
+    /* ─── Slide counter ─────────────────────────────────── */
+    .slide-counter {
+      position: absolute;
+      bottom: 3rem;
+      right: 4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: rgba(118, 72, 46, 0.4);
+      z-index: 10;
+      font-variant-numeric: tabular-nums;
+    }
+    .slide-counter .current { color: var(--orange); }
+
+    /* ─── Arrow hint ────────────────────────────────────── */
+    .arrow-hint {
+      position: absolute;
+      bottom: 2.9rem;
+      left: 4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(118, 72, 46, 0.4);
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    .arrow-hint svg { opacity: 0.5; }
+  </style>
+</head>
+<body>
+
+  <div class="cursor" id="cursor"></div>
+
+  <div class="stage" id="stage">
+
+    <!-- ── Slide 1: Intro ──────────────────────────────── -->
+    <div class="slide slide-intro active" data-slide="0">
+      <img class="slide-bg" src="bkg.svg" alt="" draggable="false" />
+      <div class="slide-content">
+        <div class="logo-wrap">
+          <img src="logo.svg" alt="Electron Workshop" />
+        </div>
+        <div class="headline">
+          <span class="line1">Weekly Check-In</span>
+          <span class="line2">&amp; Sprints</span>
+        </div>
+        <div class="rule"></div>
+      </div>
+    </div>
+
+    <!-- ── Slide 2: Pitches + Demo ────────────────────── -->
+    <div class="slide slide-pitches" data-slide="1">
+      <img class="slide-bg" src="bkg.svg" alt="" draggable="false" />
+      <div class="slide-content">
+        <div class="pitch-inner">
+          <span class="slide-tag">Up Next</span>
+          <h2 class="pitch-heading">Pitches &amp; <em>Demo</em></h2>
+          <p class="pitch-instruction">Add your project or product to Lightning Ladder</p>
+          <a
+            class="ladder-pill"
+            href="https://lightning-ladder.netlify.app/#/room/SPRINT"
+            target="_blank"
+            rel="noopener noreferrer"
+            onclick="event.stopPropagation()"
+          >
+            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            lightning-ladder.netlify.app/#/room/SPRINT
+            <span class="pill-badge">SPRINT</span>
+          </a>
+          <p class="pitch-note">
+            Enter your <strong>project or product name</strong> — not your personal name
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Slide 3: Roadmap ───────────────────────────── -->
+    <div class="slide slide-roadmap" data-slide="2">
+      <img class="slide-bg" src="bkg.svg" alt="" draggable="false" />
+      <div class="slide-content">
+        <div class="roadmap-inner">
+          <p class="roadmap-eyebrow">Looking Ahead</p>
+          <h2 class="roadmap-heading">Roadmap</h2>
+          <p class="roadmap-sub">What's next for Sprints &amp; Weekly Check-Ins</p>
+          <div class="roadmap-spacer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dots ───────────────────────────────────────── -->
+    <div class="nav-dots" id="navDots">
+      <div class="dot active" data-target="0"></div>
+      <div class="dot" data-target="1"></div>
+      <div class="dot" data-target="2"></div>
+    </div>
+
+    <!-- ── Counter ────────────────────────────────────── -->
+    <div class="slide-counter">
+      <span class="current" id="counterCurrent">01</span>
+      <span> / </span>
+      <span id="counterTotal">03</span>
+    </div>
+
+    <!-- ── Arrow hint ─────────────────────────────────── -->
+    <div class="arrow-hint" id="arrowHint">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+      Arrow keys to navigate
+    </div>
+
+  </div><!-- /stage -->
+
+  <script>
+    // ── Responsive scaling ─────────────────────────────────
+    const stage = document.getElementById('stage');
+    const BASE_W = 1920, BASE_H = 1080;
+
+    function scaleStage() {
+      const sw = window.innerWidth, sh = window.innerHeight;
+      const scale = Math.min(sw / BASE_W, sh / BASE_H);
+      stage.style.width  = BASE_W + 'px';
+      stage.style.height = BASE_H + 'px';
+      stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    scaleStage();
+    window.addEventListener('resize', scaleStage);
+
+    // ── Slide state ────────────────────────────────────────
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const dots   = Array.from(document.querySelectorAll('.dot'));
+    const counterEl = document.getElementById('counterCurrent');
+    let current = 0;
+
+    function goTo(n) {
+      if (n === current) return;
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = (n + slides.length) % slides.length;
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      counterEl.textContent = String(current + 1).padStart(2, '0');
+    }
+
+    function next() { goTo(current + 1); }
+    function prev() { goTo(current - 1); }
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); next(); }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); prev(); }
+    });
+
+    // Click anywhere on stage advances (except links)
+    stage.addEventListener('click', e => {
+      if (e.target.closest('a')) return;
+      next();
+    });
+
+    // Dot clicks
+    dots.forEach(dot => {
+      dot.addEventListener('click', e => {
+        e.stopPropagation();
+        goTo(parseInt(dot.dataset.target));
+      });
+    });
+
+    // ── Custom cursor ──────────────────────────────────────
+    const cursorEl = document.getElementById('cursor');
+    document.addEventListener('mousemove', e => {
+      cursorEl.style.left = e.clientX + 'px';
+      cursorEl.style.top  = e.clientY + 'px';
+    });
+    document.addEventListener('mouseleave', () => cursorEl.style.opacity = '0');
+    document.addEventListener('mouseenter', () => cursorEl.style.opacity = '1');
+
+    // ── Hide arrow hint after first interaction ────────────
+    const hint = document.getElementById('arrowHint');
+    function hideHint() {
+      hint.style.opacity = '0';
+      hint.style.pointerEvents = 'none';
+    }
+    document.addEventListener('keydown', hideHint, { once: true });
+    stage.addEventListener('click', hideHint, { once: true });
+  </script>
+</body>
+</html>
